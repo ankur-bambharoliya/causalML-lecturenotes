@@ -40,18 +40,26 @@ pyro.set_rng_seed(101)
 
 Our goal is to understand causal modeling within the context of generative machine learning. We just examined one generative machine learning framework called Bayesian networks (BNs) and how we can use BNs as causal models.
 
-### Ladder of causality (slides)
+### 5.1.1 Ladder of causality
 
-* Associative:
-  * Broad class of statistically learned models (discriminiative and generative)
-  * Includes deep learning (unless you tweak it)
-* Intervention
-  * Why associative models can't do this -- changing the joint
-  * Causal Bayes nets
-  * Tradition PPL program
-* Counterfactual
-  * Causal Bayesian networks can't do this
-  * Structural causal models -- can be implemented in a PPL
+There are three levels of causal inference and we call it the ladder of causality.
+
+* ### Associative(Seeing):
+    Two variables are associative if observing one changes the probability of observing the other. Most of the machine learning models are good at finding an association between variables or features.
+
+    For Example, What does a symptom tell me about a disease?
+    
+    One problem with associative inference is it does not have causal implications. In the above example, it might be that both the symptom and the disease both are caused by hidden variable(confounder) lifestyle.  
+
+* ### Intervention(Doing):
+    In intervention, we override the normal causal structure, forcing a variable to take a value it might not have taken if the system were left alone. 
+
+    For Example, If I take aspirin, will my headache be cured?
+
+    note that this distribution is difference than `` P(cured|aspirin)`` because there might be a confounder cause. Interventions can be performed on any causal Bayesian networks.
+
+* ### Counterfactual(Imagining):
+    Counterfactual causal inferences reason about hypothetical situations, things that could happen. For example, answering a question like was it the aspirin that stopped my headache. To perform such inference you need Structural causal models which can be implemented using PPLs.
 
 ### Some definitions and notation
 
@@ -70,21 +78,20 @@ Our goal is to understand causal modeling within the context of generative machi
 
 ### Difference between Bayesian networks and probabilistic programming
 
-* BNs have more constraint
-  * Probabilistic relationships limited to conditional probability distributions (CPDs) factored according to a DAG.  
-    * Frameworks typically limit you to a small set of parametric CPDs (e.g., Gaussian, multinomial).
-    * bnlearn allows multinomial or ordinal variables for discrete, Gaussian for continuous.
-* PPLs let you represent relations any way you like so long as you can represent them in code.
-  * Nonparameterics
-  * Strange distributions
-  * Control flow and recursion
-    * DAGs all variables are known in advance
-    * "Open world models": control flow may create new variables (blackboard)
+* Bayesian network(BN) is a DAG, where each edge represents a causal effect between two nodes. In BNs, the joint distribution is a product of all the factored conditional probability distributions(CPDs). BN frameworks generally provide a  small set of parametric conditional probability distributions. For example, bnlearn provides multinomial or ordinal variables for a discrete variable, Gaussian for continuous variable and some basic regressions.
+
+* Probablistic Programming Langugage(PPPL) is way much expressive than Bayesian network and 
+let you reprsent relations any way you like as long as you can represent them in code. 
+  * Using PPLs you can develop none-parametric causal models like Dirichlet Process. To understand this in detail lets take a look at the Chinese restaurant process metaphor which is similar to k-means but without fixed value for k. The metaphor is as follows:
+Imagine a Chinese restaurant in which customers enter. A new customer sits down at a table with a probability proportional to the number of customers already sitting there. Additionally, a customer opens a new table with some probability. Bayesian networks cannot represent such a dynamic process with its static DAG.
+  * Most PPLs implement advanced distributions like Gamma, Wishart and Dirichlet distributions. Moreover, PPL also lets you create new distribution which cannot do using bnlearn.
+  * PPLs contain control flow (if, for, while) and recursion. which helps in creating open world model with variables that are avaible in models based on some condition. For example 
       ```
       X = Bernoulli(p)
       if X == 1:
           Y = Gaussian(0, 1)
       ```
+      Here, Y is available in model when X is 1. You can also created complex model like gaussian random walk where each step depends on the previous step.
       ```
       X = Poisson(λ)
       Y = zeros(X)
@@ -92,22 +99,17 @@ Our goal is to understand causal modeling within the context of generative machi
       for i in range(1, X):
           Y[i] = Gaussian(Y[i-1], 1))
       ```
-* Inference ![Image](fig/inference.png)
-  * Inference is easier in BNs given the constraints
-    * PGM inference such as belief probagation, variable elimination
-  * In PPLs inference is tougher
-    * Require you to become something of an inference expert
-    * That said, PPL developers provide inference abstractions so you don't have to work from scratch
-    * PPLs use cutting-edge inference algorithms
-      * Include tensor-based frameworks like Tensorflow and PyTorch, allow you to build on data science intuition.
-      * Stochastic variation inference
-      * Minibatching -- process groups of training examples simultaneously to take advantage of modern hardware like GPUs
-  * Finally, it is easier to reason about the joint distribution if you have a DAG. 
+* Generative models let you generate samples, but actual usefulness of graphical models come from its ability to perform inference.  The following image is a generative model. In model first you sample start position at the top from categorical distribution and the ball ends in one of the slots based on Gaussian distribution. 
+![Image](fig/inference.png)
+In this model, generating samples is a trivial forward task in which first you sample categorical distribution and then sample Gaussian distribution to get the final position of the ball. Whereas inference is a more challenging backward task. For example, one of the possible inference question for this model is if you know the final position of the ball then can we infer anything about starting position of the ball?
 
+    Inference in Bayesian networks is easy because of its constraints on types of models you can develop using DAG. You can use any of probabilistic graphical model inference algorithms such as belief propagation, variable elimination.
+    
+    Because of control flows and support for advanced distributions, in PPLs inference is tougher and hence users require some kind of inference expertise. That being said, PPLs provide inference abstractions and cutting-edge inference algorithms so users don't have to work from scratch. Moreover, PPLs Include tensor-based frameworks like Tensorflow and PyTorch, allow you to build on data science intuition. For example, mini batching which lets you, process groups of training examples, simultaneously to take advantage of modern hardware like GPUs to scale your model to a large dataset.  
+    
 ## Reasoning with DAGs
 
 ###  Intuition
-
 * DAGs as a graphical language for reasoning about conditional independence
 * Impossible to learn a language all at once, we'll focus on learning what it can do for us
 
